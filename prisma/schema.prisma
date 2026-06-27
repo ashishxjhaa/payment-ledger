@@ -28,6 +28,8 @@ model Account {
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
+  transactions Transaction[]
+
   createAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -36,4 +38,27 @@ enum AccountStatus {
   ACTIVE
   FROZEN
   CLOSED
+}
+
+model Transaction {
+  id String @id @default(uuid())
+
+  fromAccount    String
+  toAccount      String
+  status         TransactionStatus @default(PENDING)
+  amount         Float
+  idempotencyKey String
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id])
+
+  createAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REVERSED
 }
