@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../../db";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import sendRegistrationEmail from "../services/email.service";
 
 const registerSchema = z.object({
   name: z.string("Name is required"),
@@ -56,6 +57,8 @@ export const registerUser = async (req: Request, res: Response) => {
       user: { name: user.name, email: user.email },
       token,
     });
+
+    await sendRegistrationEmail(user.email, user.name);
   } catch (error) {
     return res.status(500).json({
       error: "Failed to register",
