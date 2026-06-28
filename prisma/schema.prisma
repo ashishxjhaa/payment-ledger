@@ -30,6 +30,8 @@ model Account {
 
   transactions Transaction[]
 
+  ledgers Ledger[]
+
   createAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -47,10 +49,12 @@ model Transaction {
   toAccount      String
   status         TransactionStatus @default(PENDING)
   amount         Float
-  idempotencyKey String
+  idempotencyKey String            @unique
 
   accountId String
   account   Account @relation(fields: [accountId], references: [id])
+
+  ledgers Ledger[]
 
   createAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -61,4 +65,25 @@ enum TransactionStatus {
   COMPLETED
   FAILED
   REVERSED
+}
+
+model Ledger {
+  id String @id @default(uuid())
+
+  amount Float
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id])
+
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+
+  type LedgerType
+
+  createdAt DateTime @default(now())
+}
+
+enum LedgerType {
+  CREDIT
+  DEBIT
 }
