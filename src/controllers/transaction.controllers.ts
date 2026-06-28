@@ -102,7 +102,7 @@ export const createTransaction = async (req: Request, res: Response) => {
       });
     }
 
-    await prisma.$transaction(async (tx) => {
+    const transaction = await prisma.$transaction(async (tx) => {
       await tx.account.update({
         where: {
           id: senderAccount.id,
@@ -111,6 +111,7 @@ export const createTransaction = async (req: Request, res: Response) => {
           balance: { decrement: amount },
         },
       });
+
       await tx.account.update({
         where: {
           id: receiverAccount.id,
@@ -119,8 +120,51 @@ export const createTransaction = async (req: Request, res: Response) => {
           balance: { increment: amount },
         },
       });
+
+      const transaction = await tx.transaction.create({
+        data: {
+          fromAccountId: senderAccount.id,
+          toAccountId: receiverAccount.id,
+          amount,
+          idempotencyKey,
+          status: "PENDING",
+        },
+      });
+
+      await tx.ledger.create({
+        data: {
+          accountId: senderAccount.id,
+          transactionId: transaction.id,
+          amount,
+          type: "DEBIT",
+        },
+      });
+
+      await tx.ledger.create({
+        data: {
+          accountId: receiverAccount.id,
+          transactionId: transaction.id,
+          amount,
+          type: "CREDIT",
+        },
+      });
+
+      await tx.transaction.update({
+        where: {
+          id: transaction.id,
+        },
+        data: {
+          status: "COMPLETED",
+        },
+      });
+
+      return transaction;
     });
-    // payment process then ledger debit and credit
+
+    return res.status(201).json({
+      message: "Transaction completed successfully",
+      transaction,
+    });
   } catch (error) {
     return res.status(500).json({
       error: "Failed to create transaction",
