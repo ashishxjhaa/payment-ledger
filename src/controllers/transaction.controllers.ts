@@ -11,6 +11,10 @@ const transactionSchema = z.object({
   idempotencyKey: z.string().uuid("Invalid idempotency key"),
 });
 
+const accountIdSchema = z.object({
+  accountId: z.string().uuid("Invalid account ID"),
+});
+
 export const createTransaction = async (req: Request, res: Response) => {
   try {
     const parsedResult = transactionSchema.safeParse(req.body);
@@ -168,6 +172,41 @@ export const createTransaction = async (req: Request, res: Response) => {
   } catch (error) {
     return res.status(500).json({
       error: "Failed to create transaction",
+    });
+  }
+};
+
+export const getAccountBalance = async (req: Request, res: Response) => {
+  try {
+    const parsedResult = accountIdSchema.safeParse(req.params);
+    if (!parsedResult.success) {
+      return res.status(400).json({
+        error: parsedResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const { accountId } = parsedResult.data;
+
+    const account = await prisma.account.findFirst({
+      where: {
+        id: accountId,
+        userId: req.userId,
+      },
+    });
+    if (!account) {
+      return res.status(404).json({
+        error: "Account not found",
+      });
+    }
+
+    return res.status(200).json({
+      balance: account.balance,
+      currency: account.currency,
+      status: account.status,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Failed to fetch account balance",
     });
   }
 };
